@@ -12,10 +12,10 @@ const PC_ENTITY = process.env.PC_ENTITY;
 // ---------- REGISTRAR COMANDOS ----------
 const commands = [
   new SlashCommandBuilder()
-    .setName("Encender_PC")
+    .setName("encender_pc")
     .setDescription("Enciende el PC"),
   new SlashCommandBuilder()
-    .setName("Estado_PC")
+    .setName("estado_pc")
     .setDescription("Muestra el estado del PC")
 ].map(cmd => cmd.toJSON());
 
@@ -66,3 +66,4 @@ client.on("interactionCreate", async interaction => {
 });
 
 client.login(DISCORD_TOKEN);
+
