@@ -36,13 +36,12 @@ client.once("ready", () => {
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  // 🔐 Intentamos deferReply de forma segura
+  // 🔐 deferReply seguro
   try {
     if (!interaction.deferred && !interaction.replied) {
       await interaction.deferReply({ flags: 64 });
     }
   } catch (err) {
-    // ❗ Si la interacción ya no existe, salimos sin romper nada
     if (err.code === 10062) {
       console.warn("⚠️ INTERACCIÓN EXPIRADA (IGNORADA)");
       return;
@@ -51,7 +50,7 @@ client.on("interactionCreate", async (interaction) => {
   }
 
   try {
-    /* ===== CONTROL DE ACCESO ===== */
+    /* ===== CONTROL DE ACCESO POR ROL ===== */
     const rolesUsuario = interaction.member.roles.cache;
     if (!rolesUsuario.has(ID_ROLE_PERMITIDO)) {
       await interaction.editReply("⛔ NO TIENES PERMISO PARA USAR ESTE COMANDO");
@@ -74,7 +73,9 @@ client.on("interactionCreate", async (interaction) => {
         return;
       }
 
-      await interaction.editReply("🟢 ENVIADO COMANDO DE ENCENDIDO AL PC");
+      await interaction.editReply(
+        "🟢 **COMANDO DE ENCENDIDO AL PC --> ENVIADO**"
+      );
     }
 
     /* ===== ESTADO PC ===== */
@@ -107,7 +108,7 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.editReply("⚠️ ERROR AL CONTACTAR CON HOME ASSISTANT");
       }
     } catch {
-      // Si ya no se puede responder, no hacemos nada
+      // interacción ya inválida, no hacemos nada
     }
   }
 });
