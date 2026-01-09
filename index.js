@@ -15,7 +15,7 @@ const ID_ROLE_PERMITIDO = process.env.ID_ROLE_PERMITIDO;
    VALIDACIÓN
 ========================= */
 if (!DISCORD_TOKEN || !HA_URL || !HA_TOKEN || !PC_ENTITY || !ID_ROLE_PERMITIDO) {
-  console.error("❌ Faltan variables de entorno obligatorias");
+  console.error("❌ FALTAN VARIABLES DE ENTORNO OBLIGATORIAS");
   process.exit(1);
 }
 
@@ -27,7 +27,7 @@ const client = new Client({
 });
 
 client.once("ready", () => {
-  console.log(`🤖 Bot conectado como ${client.user.tag}`);
+  console.log(`🤖 BOT CONECTADO COMO ${client.user.tag}`);
 });
 
 /* =========================
@@ -37,13 +37,13 @@ client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   try {
-    // ⏳ Avisamos a Discord de que vamos a tardar
-    await interaction.deferReply({ ephemeral: true });
+    // ⏳ INDICAMOS A DISCORD QUE RESPONDEREMOS MÁS TARDE (EPHEMERAL)
+    await interaction.deferReply({ flags: 64 });
 
-    /* ===== CONTROL DE ACCESO ===== */
+    /* ===== CONTROL DE ACCESO POR ROL ===== */
     const rolesUsuario = interaction.member.roles.cache;
     if (!rolesUsuario.has(ID_ROLE_PERMITIDO)) {
-      await interaction.editReply("⛔ No tienes permiso para usar este comando");
+      await interaction.editReply("⛔ NO TIENES PERMISO PARA USAR ESTE COMANDO");
       return;
     }
 
@@ -59,11 +59,11 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       if (!res.ok) {
-        await interaction.editReply("❌ No se pudo enviar la orden de encendido");
+        await interaction.editReply("❌ NO SE PUDO ENVIAR LA ORDEN DE ENCENDIDO");
         return;
       }
 
-      await interaction.editReply("🟢 PC ENCENDIDO");
+      await interaction.editReply("🟢 ENVIADO COMANDO DE ENCENDIDO AL PC");
     }
 
     /* ===== ESTADO PC ===== */
@@ -75,7 +75,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       if (!res.ok) {
-        await interaction.editReply("⚠️ No se pudo obtener el estado del PC");
+        await interaction.editReply("⚠️ NO SE PUDO OBTENER EL ESTADO DEL PC");
         return;
       }
 
@@ -87,12 +87,12 @@ client.on("interactionCreate", async (interaction) => {
           ? "🔴 APAGADO"
           : "❓ DESCONOCIDO";
 
-      await interaction.editReply(`💻 Estado del PC: **${estadoHumano}**`);
+      await interaction.editReply(`💻 ESTADO DEL PC: **${estadoHumano}**`);
     }
   } catch (err) {
-    console.error("❌ Error:", err);
+    console.error("❌ ERROR:", err);
     if (interaction.deferred || interaction.replied) {
-      await interaction.editReply("⚠️ Error al contactar con Home Assistant");
+      await interaction.editReply("⚠️ ERROR AL CONTACTAR CON HOME ASSISTANT");
     }
   }
 });
@@ -103,13 +103,13 @@ client.on("interactionCreate", async (interaction) => {
 client.login(DISCORD_TOKEN);
 
 /* =========================
-   SERVIDOR HTTP DUMMY (Render)
+   SERVIDOR HTTP DUMMY (RENDER)
 ========================= */
 const PORT = process.env.PORT || 3000;
 
 http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("Bot activo");
+  res.end("BOT ACTIVO");
 }).listen(PORT, () => {
-  console.log(`🌐 Servidor dummy escuchando en puerto ${PORT}`);
+  console.log(`🌐 SERVIDOR DUMMY ESCUCHANDO EN PUERTO ${PORT}`);
 });
