@@ -1,46 +1,28 @@
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from "discord.js";
+import { Client, GatewayIntentBits } from "discord.js";
 import fetch from "node-fetch";
+import http from "http";
 
-// ================== VARIABLES DE ENTORNO ==================
+/* =========================
+   VARIABLES DE ENTORNO
+========================= */
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
-
-const HA_URL = process.env.HA_URL;
+const HA_URL = process.env.HA_URL; // ej: https://ha.tudominio.com
 const HA_TOKEN = process.env.HA_TOKEN;
-const PC_ENTITY = process.env.PC_ENTITY;
+const ENTITY_ID = "switch.pc_win_ppa";
 
-// ================== VALIDACIONES BÁSICAS ==================
-if (!DISCORD_TOKEN || !CLIENT_ID || !GUILD_ID || !HA_URL || !HA_TOKEN || !PC_ENTITY) {
-  console.error("❌ Faltan variables de entorno obligatorias");
+/* =========================
+   VALIDACIONES BÁSICAS
+========================= */
+if (!DISCORD_TOKEN || !CLIENT_ID || !GUILD_ID || !HA_URL || !HA_TOKEN) {
+  console.error("❌ Faltan variables de entorno");
   process.exit(1);
 }
 
-// ================== REGISTRO DE SLASH COMMANDS ==================
-const commands = [
-  new SlashCommandBuilder()
-    .setName("encender_pc")
-    .setDescription("Enciende el PC"),
-  new SlashCommandBuilder()
-    .setName("estado_pc")
-    .setDescription("Muestra el estado del PC")
-].map(cmd => cmd.toJSON());
-
-const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN);
-
-(async () => {
-  try {
-    await rest.put(
-      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
-      { body: commands }
-    );
-    console.log("✅ Slash commands registrados");
-  } catch (err) {
-    console.error("❌ Error registrando comandos:", err);
-  }
-})();
-
-// ================== CLIENTE DISCORD ==================
+/* =========================
+   CLIENTE DISCORD
+========================= */
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
@@ -49,71 +31,62 @@ client.once("ready", () => {
   console.log(`🤖 Bot conectado como ${client.user.tag}`);
 });
 
-// ================== MANEJO DE COMANDOS ==================
+/* =========================
+   INTERACCIONES
+========================= */
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  // ---------- ENCENDER PC ----------
-  if (interaction.commandName === "encender_pc") {
-    try {
-      const res = await fetch(`${HA_URL}/api/services/switch/turn_on`, {
+  try {
+    /* ===== ENCENDER PC ===== */
+    if (interaction.commandName === "encender_pc") {
+      await fetch(`${HA_URL}/api/services/switch/turn_on`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${HA_TOKEN}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          entity_id: PC_ENTITY
-        })
+        body: JSON.stringify({ entity_id: ENTITY_ID })
       });
 
-      if (!res.ok) {
-        await interaction.reply("❌ No se pudo enviar la orden de encendido al PC");
-        return;
-      }
-
-      await interaction.reply("🟢 Orden enviada: **PC ENCENDIÉNDOSE**");
-    } catch (err) {
-      console.error("Error encendiendo PC:", err);
-      await interaction.reply("❌ Error inesperado al encender el PC");
+      await interaction.reply("🟢 PC ENCENDIDO");
     }
-  }
 
-  // ---------- ESTADO PC ----------
-  if (interaction.commandName === "estado_pc") {
-    try {
-      const res = await fetch(`${HA_URL}/api/states/${PC_ENTITY}`, {
+    /* ===== ESTADO PC ===== */
+    if (interaction.commandName === "estado_pc") {
+      const res = await fetch(`${HA_URL}/api/states/${ENTITY_ID}`, {
         headers: {
           "Authorization": `Bearer ${HA_TOKEN}`
         }
       });
 
-      if (!res.ok) {
-        await interaction.reply("⚠️ No se pudo obtener el estado del PC");
-        return;
-      }
+      const data = await res.json();
+      const estado = data.state === "on" ? "🟢 ENCENDIDO" : "🔴 APAGADO";
 
-      const text = await res.text();
-      let data;
+      await interaction.reply(`Estado del PC: ${estado}`);
+    }
 
-      try {
-        data = JSON.parse(text);
-      } catch {
-        await interaction.reply("⚠️ Respuesta inesperada de Home Assistant");
-        return;
-      }
-
-      let estadoHumano = "DESCONOCIDO";
-      if (data.state === "on") estadoHumano = "🟢 ENCENDIDO";
-      if (data.state === "off") estadoHumano = "🔴 APAGADO";
-
-      await interaction.reply(`💻 Estado del PC: **${estadoHumano}**`);
-    } catch (err) {
-      console.error("Error consultando estado:", err);
-      await interaction.reply("❌ Error inesperado al consultar el estado del PC");
+  } catch (err) {
+    console.error("❌ Error:", err);
+    if (!interaction.replied) {
+      await interaction.reply("⚠️ Error al contactar con Home Assistant");
     }
   }
 });
 
-// ================== LOGIN ==================
+/* =========================
+   LOGIN BOT
+========================= */
 client.login(DISCORD_TOKEN);
+
+/* =========================
+   SERVIDOR HTTP DUMMY (Render)
+========================= */
+const PORT = process.env.PORT || 3000;
+
+http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Bot activo");
+}).listen(PORT, () => {
+  console.log(`🌐 Servidor dummy escuchando en puerto ${PORT}`);
+});
