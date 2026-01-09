@@ -15,7 +15,7 @@ const ID_ROLE_PERMITIDO = process.env.ID_ROLE_PERMITIDO;
    VALIDACIÓN
 ========================= */
 if (!DISCORD_TOKEN || !HA_URL || !HA_TOKEN || !PC_ENTITY || !ID_ROLE_PERMITIDO) {
-  console.error("❌ FALTAN VARIABLES DE ENTORNO OBLIGATORIAS");
+  console.error("❌ FALTAN VARIABLES DE ENTORNO");
   process.exit(1);
 }
 
@@ -36,11 +36,22 @@ client.once("ready", () => {
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
+  // 🔐 Intentamos deferReply de forma segura
   try {
-    // ⏳ INDICAMOS A DISCORD QUE RESPONDEREMOS MÁS TARDE (EPHEMERAL)
-    await interaction.deferReply({ flags: 64 });
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ flags: 64 });
+    }
+  } catch (err) {
+    // ❗ Si la interacción ya no existe, salimos sin romper nada
+    if (err.code === 10062) {
+      console.warn("⚠️ INTERACCIÓN EXPIRADA (IGNORADA)");
+      return;
+    }
+    throw err;
+  }
 
-    /* ===== CONTROL DE ACCESO POR ROL ===== */
+  try {
+    /* ===== CONTROL DE ACCESO ===== */
     const rolesUsuario = interaction.member.roles.cache;
     if (!rolesUsuario.has(ID_ROLE_PERMITIDO)) {
       await interaction.editReply("⛔ NO TIENES PERMISO PARA USAR ESTE COMANDO");
@@ -91,8 +102,12 @@ client.on("interactionCreate", async (interaction) => {
     }
   } catch (err) {
     console.error("❌ ERROR:", err);
-    if (interaction.deferred || interaction.replied) {
-      await interaction.editReply("⚠️ ERROR AL CONTACTAR CON HOME ASSISTANT");
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply("⚠️ ERROR AL CONTACTAR CON HOME ASSISTANT");
+      }
+    } catch {
+      // Si ya no se puede responder, no hacemos nada
     }
   }
 });
